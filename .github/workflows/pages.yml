@@ -18,14 +18,16 @@ jobs:
       url: ${{ steps.deployment.outputs.page_url }}
     steps:
       - uses: actions/checkout@v6
-      - name: Unpack browser application
+      - name: Verify and unpack application
         run: |
           mkdir _site
           unzip -q github-pages-app.zip -d _site
           touch _site/.nojekyll
           test -f _site/index.html
-          test -f _site/runtime/ort-asyncify.part0
+          test -f _site/runtime/ort-asyncify.part0.gz
+          test -f _site/runtime/manifest.json
           if find _site -type f \( -name '*.tsx' -o -name '*.ts' -o -name '*.map' -o -name '.env*' \) | grep -q .; then exit 1; fi
+          node -e "const fs=require('fs'),p=require('path');const walk=d=>fs.readdirSync(d,{withFileTypes:true}).reduce((n,e)=>n+(e.isDirectory()?walk(p.join(d,e.name)):fs.statSync(p.join(d,e.name)).size),0);const models=JSON.parse(fs.readFileSync('_site/models/manifest.json')).reduce((n,e)=>n+e.bytes,0);if(models+walk('_site')>1000000000)throw Error('Application exceeds 1 GB');console.log('Verified 1 GB budget');"
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v4
         with:
